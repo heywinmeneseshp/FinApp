@@ -1,0 +1,8 @@
+{
+  "name": "GitHub Connector & Explorer",
+  "description": "An application to help you connect, explore, and sync your development projects with GitHub.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
