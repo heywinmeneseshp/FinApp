@@ -1,6 +1,6 @@
 {
-  "name": "GitHub Connector & Explorer",
-  "description": "An application to help you connect, explore, and sync your development projects with GitHub.",
+  "name": "FinApp",
+  "description": "Una aplicación fintech para emprendedores que combina gestión de negocio con aprendizaje de contabilidad.",
   "requestFramePermissions": [],
   "majorCapabilities": [
     "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
