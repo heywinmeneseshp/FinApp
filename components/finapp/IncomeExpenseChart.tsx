@@ -27,11 +27,24 @@ import { useFinanceStore } from '@/lib/store';
 export default function IncomeExpenseChart() {
   const { getTotals } = useFinanceStore();
   const totals = getTotals();
+  const [isMounted, setIsMounted] = React.useState(false);
+
+  React.useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  const formatCurrency = (amount: number | undefined | null) => {
+    if (!isMounted) return '$0';
+    if (amount === undefined || amount === null) return '$0';
+    const num = Number(amount);
+    if (isNaN(num)) return '$0';
+    return '$' + num.toLocaleString();
+  };
 
   return (
     <div className="bg-white p-6 rounded-[2rem] border border-zinc-100 shadow-sm flex flex-col gap-6">
       <div className="flex justify-between items-center">
-        <h3 className="text-lg font-bold text-[#151619]">Ingresos vs. Gastos</h3>
+        <h3 className="text-lg font-bold text-[#151619]">Entradas vs. Salidas</h3>
         <div className="flex items-center gap-1 px-3 py-1.5 bg-zinc-50 rounded-xl border border-zinc-100 cursor-pointer hover:bg-zinc-100 transition-colors">
           <span className="text-xs font-medium text-zinc-600">Este mes</span>
           <ChevronDown size={14} className="text-zinc-400" />
@@ -41,11 +54,11 @@ export default function IncomeExpenseChart() {
       <div className="flex gap-6 items-center">
         <div className="flex items-center gap-2">
           <div className="w-4 h-1 rounded-full bg-[#12C2A2]"></div>
-          <span className="text-xs font-medium text-zinc-500">Ingresos</span>
+          <span className="text-xs font-medium text-zinc-500">Entradas</span>
         </div>
         <div className="flex items-center gap-2">
           <div className="w-4 h-1 rounded-full bg-[#E53030]"></div>
-          <span className="text-xs font-medium text-zinc-500">Gastos</span>
+          <span className="text-xs font-medium text-zinc-500">Salidas</span>
         </div>
       </div>
 
@@ -100,10 +113,10 @@ export default function IncomeExpenseChart() {
       
       <div className="flex justify-between items-center text-xs">
           <div className="flex items-center gap-2">
-              <span className="px-2 py-1 bg-[#12C2A2] text-white rounded-md font-bold">${totals.income.toLocaleString()}</span>
+              <span className="px-2 py-1 bg-[#12C2A2] text-white rounded-md font-bold">{formatCurrency(totals.income)}</span>
           </div>
           <div className="flex items-center gap-2">
-              <span className="px-2 py-1 bg-[#E53030] text-white rounded-md font-bold">${totals.expenses.toLocaleString()}</span>
+              <span className="px-2 py-1 bg-[#E53030] text-white rounded-md font-bold">{formatCurrency(totals.expenses)}</span>
           </div>
       </div>
     </div>

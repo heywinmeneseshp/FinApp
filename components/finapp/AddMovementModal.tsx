@@ -48,26 +48,34 @@ export default function AddMovementModal({ isOpen, onClose }: AddMovementModalPr
           >
             <div className="flex justify-between items-center mb-8">
               <h2 className="text-2xl font-bold">Registrar Movimiento</h2>
-              <button onClick={onClose} className="p-2 bg-zinc-100 rounded-full">
+              <button onClick={onClose} type="button" className="p-2 bg-zinc-100 rounded-full">
                 <X size={20} />
               </button>
             </div>
 
-            <div className="flex flex-col gap-6">
+            <form 
+              onSubmit={(e) => {
+                e.preventDefault();
+                handleSave();
+              }}
+              className="flex flex-col gap-6"
+            >
               <div className="grid grid-cols-2 gap-4">
                 <button 
+                  type="button"
                   onClick={() => setType('ingreso')}
                   className={`flex flex-col items-center gap-2 p-4 rounded-3xl border-2 transition-all ${type === 'ingreso' ? 'border-[#12C2A2] bg-[#F2FAF7]' : 'border-zinc-100 bg-white'}`}
                 >
                   <TrendingUp className={type === 'ingreso' ? 'text-[#12C2A2]' : 'text-zinc-400'} />
-                  <span className={`text-sm font-bold ${type === 'ingreso' ? 'text-[#12C2A2]' : 'text-zinc-400'}`}>Ingreso</span>
+                  <span className={`text-sm font-bold ${type === 'ingreso' ? 'text-[#12C2A2]' : 'text-zinc-400'}`}>Entrada</span>
                 </button>
                 <button 
+                  type="button"
                   onClick={() => setType('gasto')}
                   className={`flex flex-col items-center gap-2 p-4 rounded-3xl border-2 transition-all ${type === 'gasto' ? 'border-[#E53030] bg-[#FFF2F2]' : 'border-zinc-100 bg-white'}`}
                 >
                   <ArrowDownCircle className={type === 'gasto' ? 'text-[#E53030]' : 'text-zinc-400'} />
-                  <span className={`text-sm font-bold ${type === 'gasto' ? 'text-[#E53030]' : 'text-zinc-400'}`}>Gasto</span>
+                  <span className={`text-sm font-bold ${type === 'gasto' ? 'text-[#E53030]' : 'text-zinc-400'}`}>Salida</span>
                 </button>
               </div>
 
@@ -96,13 +104,13 @@ export default function AddMovementModal({ isOpen, onClose }: AddMovementModalPr
               <motion.button 
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
-                onClick={handleSave}
+                type="submit"
                 className="w-full py-5 bg-[#151619] text-white rounded-3xl font-bold flex items-center justify-center gap-2 shadow-xl mt-4"
               >
                 <Save size={20} />
                 Guardar Registro
               </motion.button>
-            </div>
+            </form>
           </motion.div>
         </div>
       )}

@@ -6,12 +6,17 @@ import { motion } from 'motion/react';
 import { cn } from '@/lib/utils';
 import AddMovementModal from './AddMovementModal';
 
-export default function QuickActions() {
+interface QuickActionsProps {
+  onSalesOpen?: () => void;
+  onInventoryOpen?: () => void;
+}
+
+export default function QuickActions({ onSalesOpen, onInventoryOpen }: QuickActionsProps) {
   const [showAddModal, setShowAddModal] = useState(false);
 
   const actions = [
-    { label: 'Registrar venta', icon: <ShoppingCart size={24} />, bg: 'bg-[#F2FAF7]', color: 'text-[#12C2A2]', onClick: () => setShowAddModal(true) },
-    { label: 'Agregar producto', icon: <Package size={24} />, bg: 'bg-[#F2F7FF]', color: 'text-[#3068E5]' },
+    { label: 'Registrar venta', icon: <ShoppingCart size={24} />, bg: 'bg-[#F2FAF7]', color: 'text-[#12C2A2]', onClick: onSalesOpen },
+    { label: 'Inventario', icon: <Package size={24} />, bg: 'bg-[#F2F7FF]', color: 'text-[#3068E5]', onClick: onInventoryOpen },
     { label: 'Ver reportes', icon: <BarChart2 size={24} />, bg: 'bg-[#F7F2FF]', color: 'text-[#7C30E5]' },
     { label: 'Aprender', icon: <BookOpen size={24} />, bg: 'bg-[#FFF2F2]', color: 'text-[#E53030]' },
   ];

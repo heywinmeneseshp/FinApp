@@ -15,6 +15,13 @@ interface CertificateProps {
 
 export default function Certificate({ userName, moduleTitle, date, onClose }: CertificateProps) {
   const certificateRef = useRef<HTMLDivElement>(null);
+  const [isMounted, setIsMounted] = React.useState(false);
+  const [certId, setCertId] = React.useState('');
+
+  React.useEffect(() => {
+    setIsMounted(true);
+    setCertId(`FIN-2026-${(Math.random() * 1000).toFixed(0).padStart(4, '0')}`);
+  }, []);
 
   const downloadPDF = async () => {
     if (!certificateRef.current) return;
@@ -118,7 +125,7 @@ export default function Certificate({ userName, moduleTitle, date, onClose }: Ce
                   <BadgeCheck size={16} className="text-[#3068E5]" />
                   <div>
                     <p className="text-[10px] text-zinc-400 uppercase font-bold leading-none">ID Certificado</p>
-                    <p className="text-sm font-bold text-[#151619]">FIN-2026-{(Math.random() * 1000).toFixed(0).padStart(4, '0')}</p>
+                    <p className="text-sm font-bold text-[#151619]">{certId}</p>
                   </div>
                 </div>
               </div>

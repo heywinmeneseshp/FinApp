@@ -1,167 +1,184 @@
 'use client';
 
 import React, { useState } from 'react';
-import LearningModuleHeader from './LearningModuleHeader';
-import LessonCard from './LessonCard';
-import LessonDetail from './LessonDetail';
-import { learningModules, Lesson } from '@/lib/learning-data';
-import { motion, AnimatePresence } from 'motion/react';
-import { Star, Trophy, BookOpen } from 'lucide-react';
-
-import GlossaryModal from './GlossaryModal';
-import Certificate from './Certificate';
+import { motion } from 'motion/react';
+import { 
+  ArrowLeft, BookOpen, ChevronRight, 
+  Play, CheckCircle, Clock, Award,
+  Sparkles, BrainCircuit, Rocket
+} from 'lucide-react';
+import { useFinanceStore } from '@/lib/store';
+import { cn } from '@/lib/utils';
+import ReactMarkdown from 'react-markdown';
 
 interface LearningModuleProps {
   onBack: () => void;
 }
 
+const LESSONS = [
+  {
+    id: '1',
+    title: 'Fundamentos de Caja',
+    duration: '10 min',
+    level: 'Principiante',
+    description: 'Aprende la diferencia entre flujo de caja y rentabilidad.',
+    content: `
+# Flujo de Caja vs. Rentabilidad
+
+Es común confundir "tener dinero en el bolsillo" con "estoy ganando dinero". 
+
+### 1. El Flujo de Caja (Cash Flow)
+Es el dinero que entra y sale de tu negocio. Si vendes $1000 y gastas $800, tu flujo es de $200.
+
+### 2. La Rentabilidad
+Es lo que te queda después de pagar todos los costos fijos y variables. 
+
+**Tip Pro:** Nunca uses el dinero de las ventas para gastos personales antes de separar el costo de reposición de la mercadería.
+    `
+  },
+  {
+    id: '2',
+    title: 'Fijación de Precios',
+    duration: '15 min',
+    level: 'Intermedio',
+    description: 'Cómo calcular tu margen de ganancia real.',
+    content: `
+# ¿Cómo ponerle precio a tus productos?
+
+Muchos emprendedores simplemente multiplican el costo por 2. Pero, ¿es suficiente?
+
+### La fórmula del Margen
+Precio = Costo / (1 - Margen Deseado)
+
+Ejemplo: Si te cuesta $10 y quieres un margen del 30%:
+10 / 0.7 = $14.28
+
+**No olvides incluir:**
+- Costo de envío
+- Embalaje
+- Comisiones de pasarelas de pago
+    `
+  },
+  {
+    id: '3',
+    title: 'Escalando tu Negocio',
+    duration: '20 min',
+    level: 'Avanzado',
+    description: 'Estrategias para reinvertir tus utilidades.',
+    content: `
+# ¿Cuándo reinvertir?
+
+Si tu negocio ya es rentable, es hora de crecer.
+
+### Regla del 30/70
+Destina el 30% de tus utilidades a crecimiento y el 70% a reserva o retiro.
+
+**Dónde invertir:**
+- Marketing digital (ads)
+- Mejora de procesos
+- Nuevos canales de venta
+    `
+  }
+];
+
 export default function LearningModule({ onBack }: LearningModuleProps) {
-  const [selectedLesson, setSelectedLesson] = useState<Lesson | null>(null);
-  const [showGlossary, setShowGlossary] = useState(false);
-  const [showCertificate, setShowCertificate] = useState(false);
-  const [lessons, setLessons] = useState(learningModules[0].lessons);
-
-  const moduleProgress = Math.round(
-    (lessons.filter(l => l.status === 'completed').length / lessons.length) * 100
-  );
-
-  const handleCompleteLesson = (id: string) => {
-    setLessons(prev => prev.map(l => {
-      if (l.id === id) return { ...l, status: 'completed', progress: 100 };
-      // Normal sequential unlock
-      const currentIdx = prev.findIndex(item => item.id === id);
-      if (currentIdx !== -1 && currentIdx + 1 < prev.length) {
-        const nextId = prev[currentIdx + 1].id;
-        if (l.id === nextId && l.status === 'blocked') {
-          return { ...l, status: 'in-progress' as any };
-        }
-      }
-      return l;
-    }));
-    setSelectedLesson(null);
-  };
+  const { lessonsProgress, updateLessonProgress } = useFinanceStore();
+  const [selectedLesson, setSelectedLesson] = useState<typeof LESSONS[0] | null>(null);
 
   return (
-    <div className="min-h-screen bg-[#F8F9FB] pb-32">
-      <div className="max-w-7xl mx-auto px-6 pt-8">
-        <LearningModuleHeader 
-          onBack={onBack} 
-          onGlossary={() => setShowGlossary(true)}
-          progress={moduleProgress} 
-        />
-
-        <div className="flex flex-col gap-8">
-          {/* Top Featured Lesson or Certificate Call */}
-          {moduleProgress < 100 ? (
-            <motion.div 
-              initial={{ scale: 0.95, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              className="bg-[#151619] p-6 rounded-[2.5rem] text-white flex flex-col gap-4 relative overflow-hidden"
-            >
-              <div className="absolute top-0 right-0 w-32 h-32 bg-[#12C2A2]/20 rounded-full -mr-16 -mt-16 blur-2xl" />
-              <div className="flex flex-col gap-1">
-                <span className="text-[10px] font-bold uppercase tracking-widest text-[#12C2A2]">RECOMENDADO</span>
-                <h4 className="text-xl font-bold">Continuar aprendizaje</h4>
-                <p className="text-zinc-400 text-xs">Domina las finanzas de tu negocio paso a paso.</p>
-              </div>
-              <motion.button 
-                whileTap={{ scale: 0.95 }}
-                onClick={() => {
-                  const nextLection = lessons.find(l => l.status === 'in-progress' || l.status === 'blocked');
-                  if (nextLection && nextLection.status !== 'blocked') setSelectedLesson(nextLection);
-                }}
-                className="w-fit px-6 py-3 bg-[#12C2A2] rounded-2xl text-sm font-bold shadow-lg shadow-[#12C2A2]/20"
-              >
-                Comenzar ahora
-              </motion.button>
-            </motion.div>
-          ) : (
-            <motion.div 
-              initial={{ scale: 0.95, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              className="bg-gradient-to-br from-[#12C2A2] to-[#3068E5] p-8 rounded-[2.5rem] text-white flex flex-col gap-4 relative overflow-hidden shadow-xl"
-            >
-              <div className="absolute top-0 right-0 w-48 h-48 bg-white/10 rounded-full -mr-24 -mt-24 blur-3xl opacity-50" />
-              <div className="flex flex-col gap-1 z-10">
-                <span className="text-[10px] font-bold uppercase tracking-widest text-white/80">¡ENHORABUENA!</span>
-                <h4 className="text-2xl font-black italic tracking-tight">Módulo Completado</h4>
-                <p className="text-white/80 text-sm">Has demostrado ser un experto en Finanzas de Negocio.</p>
-              </div>
-              <motion.button 
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={() => setShowCertificate(true)}
-                className="w-full sm:w-fit px-8 py-4 bg-white text-[#12C2A2] rounded-2xl text-base font-black shadow-2xl z-10"
-              >
-                Obtener Certificado
-              </motion.button>
-            </motion.div>
-          )}
-          {/* Achievements (Mock) */}
-          <div className="flex gap-4 overflow-x-auto pb-2 -mx-6 px-6 no-scrollbar">
-            <div className="flex-shrink-0 flex items-center gap-2 p-3 bg-white border border-zinc-100 rounded-2xl">
-              <Trophy size={16} className="text-amber-500" />
-              <span className="text-xs font-bold">Resumen Diario</span>
-            </div>
-            <div className="flex-shrink-0 flex items-center gap-2 p-3 bg-white border border-zinc-100 rounded-2xl opacity-40">
-              <Star size={16} className="text-purple-500" />
-              <span className="text-xs font-bold">Mentalidad de Oro</span>
-            </div>
-            <div className="flex-shrink-0 flex items-center gap-2 p-3 bg-white border border-zinc-100 rounded-2xl opacity-40 text-blue-500">
-              <BookOpen size={16} />
-              <span className="text-xs font-bold">Contador Pro</span>
-            </div>
-          </div>
-
-          <div className="space-y-4">
-            <div className="flex justify-between items-center px-1">
-              <h3 className="text-lg font-bold text-[#151619]">Lecciones disponibles</h3>
-              <span className="text-xs font-bold text-zinc-400">MOD {learningModules[0].lessons.length}</span>
-            </div>
-
-            <div className="flex flex-col gap-4">
-              {lessons.map((lesson) => (
-                <LessonCard 
-                  key={lesson.id} 
-                  lesson={lesson} 
-                  onSelect={setSelectedLesson} 
-                />
-              ))}
-            </div>
-          </div>
+    <motion.div 
+      initial={{ opacity: 0, x: 20 }}
+      animate={{ opacity: 1, x: 0 }}
+      exit={{ opacity: 0, x: -20 }}
+      className="bg-white min-h-[70vh] rounded-[3rem] shadow-sm overflow-hidden flex flex-col"
+    >
+      <div className="p-6 bg-[#151619] text-white flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <button onClick={() => selectedLesson ? setSelectedLesson(null) : onBack()} className="w-10 h-10 bg-zinc-800 rounded-full flex items-center justify-center">
+            <ArrowLeft size={18} />
+          </button>
+          <h2 className="text-xl font-bold">{selectedLesson ? 'Lección' : 'Academia FinApp'}</h2>
         </div>
+        {!selectedLesson && (
+          <div className="bg-[#12C2A2]/10 text-[#12C2A2] px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest border border-[#12C2A2]/20">
+            Nivel: Diamante
+          </div>
+        )}
       </div>
 
-      <AnimatePresence>
-        {showGlossary && (
-          <GlossaryModal onClose={() => setShowGlossary(false)} />
+      <div className="flex-1 overflow-y-auto p-6">
+        {selectedLesson ? (
+          <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <div className="bg-zinc-50 p-8 rounded-[3rem] border border-zinc-100">
+              <div className="markdown-body prose prose-zinc max-w-none">
+                <ReactMarkdown>{selectedLesson.content}</ReactMarkdown>
+              </div>
+              <button 
+                onClick={() => {
+                  updateLessonProgress(selectedLesson.id, 'completed', 100);
+                  setSelectedLesson(null);
+                }}
+                className="w-full bg-[#12C2A2] text-white py-5 rounded-[2rem] font-black tracking-widest uppercase mt-8 shadow-xl shadow-[#12C2A2]/20 flex items-center justify-center gap-2"
+              >
+                <CheckCircle size={20} />
+                Completar Lección
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-8">
+            <div className="bg-gradient-to-br from-[#151619] to-zinc-800 p-8 rounded-[3rem] text-white relative overflow-hidden">
+               <Sparkles className="absolute -top-4 -right-4 w-24 h-24 text-white/5" />
+               <h3 className="text-2xl font-black mb-2">Tu camino al éxito</h3>
+               <p className="text-zinc-400 text-sm mb-6">Aprende finanzas prácticas diseñadas para emprendedores reales como tú.</p>
+               <div className="flex items-center gap-4">
+                  <div className="bg-white/10 p-4 rounded-3xl backdrop-blur-md">
+                     <Award className="text-[#12C2A2]" size={32} />
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-black uppercase tracking-widest text-[#12C2A2]">Progreso Total</p>
+                    <p className="text-2xl font-black">40% completado</p>
+                  </div>
+               </div>
+            </div>
+
+            <div className="space-y-4">
+              <h4 className="text-xs font-black text-zinc-400 uppercase tracking-widest ml-4">Cursos disponibles</h4>
+              {LESSONS.map((lesson) => {
+                const progress = lessonsProgress[lesson.id];
+                return (
+                  <button
+                    key={lesson.id}
+                    onClick={() => setSelectedLesson(lesson)}
+                    className="w-full bg-zinc-50 p-6 rounded-[2.5rem] border border-zinc-100 flex items-center justify-between hover:bg-white hover:border-[#12C2A2] hover:shadow-md transition-all group"
+                  >
+                    <div className="flex items-center gap-5">
+                      <div className={cn(
+                        "w-14 h-14 rounded-3xl flex items-center justify-center shadow-sm transition-all",
+                        progress?.status === 'completed' ? "bg-[#F2FAF7] text-[#12C2A2]" : "bg-white text-zinc-300 group-hover:text-[#12C2A2]"
+                      )}>
+                        {progress?.status === 'completed' ? <CheckCircle size={28} /> : <Play size={24} />}
+                      </div>
+                      <div className="text-left">
+                        <h5 className="font-bold text-[#151619]">{lesson.title}</h5>
+                        <div className="flex items-center gap-3 mt-1">
+                          <span className="text-[10px] bg-zinc-200 px-2 py-0.5 rounded-lg font-bold text-zinc-500 flex items-center gap-1 uppercase tracking-tighter">
+                            <Clock size={10} /> {lesson.duration}
+                          </span>
+                          <span className="text-[10px] font-bold text-zinc-400 uppercase">
+                            {lesson.level}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                    <ChevronRight size={20} className="text-zinc-300 group-hover:text-[#12C2A2] transition-colors" />
+                  </button>
+                );
+              })}
+            </div>
+          </div>
         )}
-        <AnimatePresence>
-          {showCertificate && (
-            <Certificate 
-              userName="Emprendedor" 
-              moduleTitle="Finanzas de tu Negocio" 
-              date={new Date().toLocaleDateString()}
-              onClose={() => setShowCertificate(false)}
-            />
-          )}
-        </AnimatePresence>
-        {selectedLesson && (
-          <motion.div
-            initial={{ y: '100%' }}
-            animate={{ y: 0 }}
-            exit={{ y: '100%' }}
-            transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-            className="fixed inset-0 z-[60]"
-          >
-            <LessonDetail 
-              lesson={selectedLesson} 
-              onBack={() => setSelectedLesson(null)}
-              onComplete={handleCompleteLesson}
-            />
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
+      </div>
+    </motion.div>
   );
 }

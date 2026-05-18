@@ -1,1 +1,15 @@
 @import "tailwindcss";
+
+:root {
+  --font-sans: 'Inter', sans-serif;
+}
+
+body {
+  background-color: #F8F9FA;
+  color: #151619;
+}
+
+.markdown-body {
+  font-size: 14px;
+  line-height: 1.6;
+}
