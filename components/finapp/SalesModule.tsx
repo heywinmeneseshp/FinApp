@@ -43,9 +43,21 @@ export default function SalesModule({ onBack }: SalesModuleProps) {
   );
 
   const addToCart = (productId: string) => {
+    const product = products.find(p => p.id === productId);
+    if (!product) return;
+
+    if (product.stock <= 0) {
+      alert("Este producto no tiene stock disponible.");
+      return;
+    }
+
     setCart(prev => {
       const existing = prev.find(item => item.productId === productId);
       if (existing) {
+        if (existing.quantity >= product.stock) {
+          alert(`Solo quedan ${product.stock} unidades en stock.`);
+          return prev;
+        }
         return prev.map(item => item.productId === productId ? { ...item, quantity: item.quantity + 1 } : item);
       }
       return [...prev, { productId, quantity: 1 }];

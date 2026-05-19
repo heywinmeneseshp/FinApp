@@ -9,6 +9,9 @@ import {
   ChevronRight, User
 } from 'lucide-react';
 import { useFinanceStore } from '@/lib/store';
+import { auth, db } from '@/lib/firebase';
+import { onAuthStateChanged, signOut } from 'firebase/auth';
+import { doc, getDoc, onSnapshot, setDoc } from 'firebase/firestore';
 import SalesModule from '@/components/finapp/SalesModule';
 import InventoryModule from '@/components/finapp/InventoryModule';
 import LearningModule from '@/components/finapp/LearningModule';
@@ -19,7 +22,7 @@ import PaymentsModule from '@/components/finapp/PaymentsModule';
 import ProfitDetails from '@/components/finapp/ProfitDetails';
 
 export default function Home() {
-  const { getTotals } = useFinanceStore();
+  const { getTotals, setUser, user } = useFinanceStore();
   const totals = getTotals();
   const [activeView, setActiveView] = useState<'main' | 'sales' | 'inventory' | 'learning' | 'profile' | 'reports' | 'accounts' | 'payments'>('main');
   const [reportType, setReportType] = useState<'ingreso' | 'gasto'>('ingreso');
@@ -28,7 +31,54 @@ export default function Home() {
 
   useEffect(() => {
     setIsMounted(true);
-  }, []);
+
+    const unsubscribeAuth = onAuthStateChanged(auth, async (firebaseUser) => {
+      if (firebaseUser) {
+        // Verificar si ya hay una sesión activa antes de proceder
+        const sessionDocRef = doc(db, `users/${firebaseUser.uid}/session`, 'status');
+        const docSnap = await getDoc(sessionDocRef);
+        
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          // Si hay una sesión activa y no es de este mismo dispositivo (opcional: añadir check de timestamp para sesiones muertas)
+          if (data.activeSessionId) {
+            alert("Ya tienes una sesión activa en otro dispositivo. Por favor cierra esa sesión para poder ingresar aquí.");
+            await signOut(auth);
+            setUser(null);
+            return;
+          }
+        }
+
+        const newSessionId = Date.now().toString() + Math.random().toString(36).substring(2);
+        
+        setUser({ 
+          uid: firebaseUser.uid, 
+          email: firebaseUser.email,
+          sessionId: newSessionId
+        });
+
+        try {
+          await setDoc(sessionDocRef, {
+            activeSessionId: newSessionId,
+            lastLogin: new Date().toISOString(),
+            device: typeof window !== 'undefined' ? navigator.userAgent : 'unknown'
+          });
+
+          // Limpiar sesión al cerrar la pestaña/ventana
+          const handleUnload = () => {
+            setDoc(sessionDocRef, { activeSessionId: null }, { merge: true });
+          };
+          window.addEventListener('beforeunload', handleUnload);
+        } catch (error) {
+          console.error("Error setting session:", error);
+        }
+      } else {
+        setUser(null);
+      }
+    });
+
+    return () => unsubscribeAuth();
+  }, [setUser]);
 
   const formatCurrency = (amount: number | undefined | null) => {
     if (!isMounted) return '$0';

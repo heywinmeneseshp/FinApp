@@ -66,5 +66,10 @@ service cloud.firestore {
         && data.name is string && data.name.size() <= 100
         && data.phone is string && data.phone.size() <= 20;
     }
+
+    // Session Rules (Single Device Enforcement)
+    match /users/{userId}/session/{sessionId} {
+      allow read, write: if isOwner(userId);
+    }
   }
 }

@@ -166,7 +166,7 @@ export default function AccountsModule({ onBack }: AccountsModuleProps) {
 
       <AnimatePresence>
         {(isAdding || editingId) && (
-          <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center p-4">
+          <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center p-0 sm:p-4">
             <motion.div 
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -175,10 +175,11 @@ export default function AccountsModule({ onBack }: AccountsModuleProps) {
               className="absolute inset-0 bg-black/40 backdrop-blur-sm"
             />
             <motion.div 
-              initial={{ y: 100, opacity: 0 }}
+              initial={{ y: "100%", opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
-              exit={{ y: 100, opacity: 0 }}
-              className="relative w-full max-w-md bg-white rounded-t-[3rem] sm:rounded-[3rem] p-8"
+              exit={{ y: "100%", opacity: 0 }}
+              transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+              className="relative w-full max-w-md bg-white rounded-t-[3rem] sm:rounded-[3rem] p-8 max-h-[92vh] overflow-y-auto"
             >
               <h3 className="text-xl font-black mb-6 text-[#151619]">
                 {editingId ? 'Editar Cuenta' : 'Nueva Cuenta'}

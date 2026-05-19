@@ -137,10 +137,19 @@ export default function InventoryModule({ onBack }: InventoryModuleProps) {
 
   const handleAddProduct = () => {
     if (!newProduct.name || !newProduct.price || !newProduct.cost) return;
+    
+    const priceNum = Number(newProduct.price);
+    const costNum = Number(newProduct.cost);
+    
+    if (priceNum < 0 || costNum < 0) {
+      alert("El precio y costo no pueden ser negativos");
+      return;
+    }
+
     addProduct({
       name: newProduct.name,
-      price: Number(newProduct.price),
-      cost: Number(newProduct.cost),
+      price: priceNum,
+      cost: costNum,
       stock: 0,
       minStock: Number(newProduct.minStock),
       category: newProduct.category,
@@ -153,12 +162,20 @@ export default function InventoryModule({ onBack }: InventoryModuleProps) {
   const handleRecordPurchase = () => {
     if (!purchaseData.productId || !purchaseData.quantity || !purchaseData.costUnit) return;
     
+    const quantityNum = Number(purchaseData.quantity);
+    const costNum = Number(purchaseData.costUnit);
+
+    if (quantityNum <= 0 || costNum < 0) {
+      alert("Ingresa una cantidad mayor a 0 y un costo válido.");
+      return;
+    }
+
     const supplier = suppliers.find(s => s.id === purchaseData.supplierId);
     
     recordPurchase({
       productId: purchaseData.productId,
-      quantity: Number(purchaseData.quantity),
-      cost: Number(purchaseData.costUnit),
+      quantity: quantityNum,
+      cost: costNum,
       paymentMethod: purchaseData.paymentMethod,
       supplierId: purchaseData.supplierId,
       accountId: purchaseData.accountId,
@@ -491,7 +508,7 @@ export default function InventoryModule({ onBack }: InventoryModuleProps) {
 
       <AnimatePresence>
         {isAddingProduct && (
-          <div className="fixed inset-0 z-50 flex items-start justify-center p-4 pt-6 sm:pt-12 overflow-y-auto">
+          <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center p-0 sm:p-4">
              <motion.div 
                initial={{ opacity: 0 }}
                animate={{ opacity: 1 }}
@@ -500,10 +517,11 @@ export default function InventoryModule({ onBack }: InventoryModuleProps) {
                className="fixed inset-0 bg-[#151619]/80 backdrop-blur-[2px]"
              />
              <motion.div 
-               initial={{ opacity: 0, scale: 0.95, y: -10 }}
-               animate={{ opacity: 1, scale: 1, y: 0 }}
-               exit={{ opacity: 0, scale: 0.95, y: -10 }}
-               className="bg-white w-full max-w-xl rounded-[2.5rem] p-6 sm:p-10 space-y-8 relative shadow-2xl mb-20 mt-4"
+               initial={{ y: "100%", opacity: 0 }}
+               animate={{ y: 0, opacity: 1 }}
+               exit={{ y: "100%", opacity: 0 }}
+               transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+               className="bg-white w-full max-w-xl rounded-t-[2.5rem] sm:rounded-[2.5rem] p-6 sm:p-10 space-y-8 relative shadow-2xl max-h-[95vh] overflow-y-auto"
              >
                <div className="flex justify-between items-center">
                  <h3 className="text-2xl font-black">Nuevo Producto</h3>
@@ -593,7 +611,7 @@ export default function InventoryModule({ onBack }: InventoryModuleProps) {
         )}
 
         {isRecordingPurchase && (
-          <div className="fixed inset-0 z-50 flex items-start justify-center p-4 pt-6 sm:pt-12 overflow-y-auto">
+          <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center p-0 sm:p-4">
             <motion.div 
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -602,10 +620,11 @@ export default function InventoryModule({ onBack }: InventoryModuleProps) {
               className="fixed inset-0 bg-[#151619]/80 backdrop-blur-[2px]"
             />
             <motion.div 
-              initial={{ opacity: 0, scale: 0.95, y: -10 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: -10 }}
-              className="bg-white w-full max-w-xl rounded-[2.5rem] p-6 sm:p-10 space-y-8 relative shadow-2xl mb-20 mt-4"
+              initial={{ y: "100%", opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: "100%", opacity: 0 }}
+              transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+              className="bg-white w-full max-w-xl rounded-t-[2.5rem] sm:rounded-[2.5rem] p-6 sm:p-10 space-y-8 relative shadow-2xl max-h-[95vh] overflow-y-auto"
             >
               <div className="flex justify-between items-center">
                 <div className="flex items-center gap-3">
@@ -747,7 +766,7 @@ export default function InventoryModule({ onBack }: InventoryModuleProps) {
         )}
 
         {isAddingSupplier && (
-          <div className="fixed inset-0 z-50 flex items-start justify-center p-4 pt-6 sm:pt-12 overflow-y-auto">
+          <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center p-0 sm:p-4">
             <motion.div 
                initial={{ opacity: 0 }}
                animate={{ opacity: 1 }}
@@ -756,10 +775,11 @@ export default function InventoryModule({ onBack }: InventoryModuleProps) {
                className="fixed inset-0 bg-[#151619]/80 backdrop-blur-[2px]"
              />
              <motion.div 
-               initial={{ opacity: 0, scale: 0.95, y: -10 }}
-               animate={{ opacity: 1, scale: 1, y: 0 }}
-               exit={{ opacity: 0, scale: 0.95, y: -10 }}
-               className="bg-white w-full max-w-xl rounded-[2.5rem] p-6 sm:p-10 space-y-8 relative shadow-2xl mb-20 mt-4"
+               initial={{ y: "100%", opacity: 0 }}
+               animate={{ y: 0, opacity: 1 }}
+               exit={{ y: "100%", opacity: 0 }}
+               transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+               className="bg-white w-full max-w-xl rounded-t-[2.5rem] sm:rounded-[2.5rem] p-6 sm:p-10 space-y-8 relative shadow-2xl max-h-[95vh] overflow-y-auto"
              >
                <div className="flex justify-between items-center">
                  <h3 className="text-2xl font-black">Nuevo Proveedor</h3>
@@ -814,7 +834,7 @@ export default function InventoryModule({ onBack }: InventoryModuleProps) {
         )}
 
         {selectedProductForAdjustment && (
-          <div className="fixed inset-0 z-50 flex items-start justify-center p-4 pt-6 sm:pt-12 overflow-y-auto">
+          <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center p-0 sm:p-4">
             <motion.div 
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -823,10 +843,11 @@ export default function InventoryModule({ onBack }: InventoryModuleProps) {
               className="fixed inset-0 bg-[#151619]/80 backdrop-blur-[2px]"
             />
             <motion.div 
-              initial={{ opacity: 0, scale: 0.95, y: -10 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: -10 }}
-              className="bg-white w-full max-w-xl rounded-[2.5rem] p-6 sm:p-10 space-y-8 relative shadow-2xl mb-20 mt-4"
+              initial={{ y: "100%", opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: "100%", opacity: 0 }}
+              transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+              className="bg-white w-full max-w-xl rounded-t-[2.5rem] sm:rounded-[2.5rem] p-6 sm:p-10 space-y-8 relative shadow-2xl max-h-[95vh] overflow-y-auto"
             >
               <div className="flex justify-between items-center">
                 <div className="flex items-center gap-3">
@@ -911,7 +932,7 @@ export default function InventoryModule({ onBack }: InventoryModuleProps) {
         )}
 
         {isShowingHistory && (
-          <div className="fixed inset-0 z-50 flex items-start justify-center p-4 pt-6 sm:pt-12 overflow-y-auto">
+          <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center p-0 sm:p-4">
             <motion.div 
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -920,10 +941,11 @@ export default function InventoryModule({ onBack }: InventoryModuleProps) {
               className="fixed inset-0 bg-[#151619]/80 backdrop-blur-[2px]"
             />
             <motion.div 
-              initial={{ opacity: 0, scale: 0.95, y: -10 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: -10 }}
-              className="bg-white w-full max-w-xl rounded-[3rem] p-6 sm:p-10 space-y-8 relative shadow-2xl mb-20 mt-4 h-fit max-h-[85vh] flex flex-col"
+              initial={{ y: "100%", opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: "100%", opacity: 0 }}
+              transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+              className="bg-white w-full max-w-xl rounded-t-[3rem] sm:rounded-[3rem] p-6 sm:p-10 space-y-8 relative shadow-2xl max-h-[92vh] flex flex-col"
             >
               <div className="flex justify-between items-center flex-shrink-0">
                 <div className="flex items-center gap-4">

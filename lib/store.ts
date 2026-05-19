@@ -79,7 +79,7 @@ interface AccountReceivable {
 }
 
 interface FinanceState {
-  user: { uid: string; email: string | null } | null;
+  user: { uid: string; email: string | null; sessionId?: string } | null;
   movements: Movement[];
   products: Product[];
   customers: Customer[];
@@ -88,7 +88,9 @@ interface FinanceState {
   accountsReceivable: AccountReceivable[];
   accounts: Account[];
   lessonsProgress: Record<string, { status: string; progress: number }>;
-  setUser: (user: { uid: string; email: string | null } | null) => void;
+  hasUnsavedChanges: boolean;
+  setUser: (user: { uid: string; email: string | null; sessionId?: string } | null) => void;
+  setSessionId: (sessionId: string) => void;
   addMovement: (movement: Omit<Movement, 'id' | 'date'>) => void;
   addSale: (items: { productId: string; quantity: number; price: number }[], description: string, customerId?: string, paymentMethod?: 'cash' | 'credit' | 'bank', dueDate?: string, accountId?: string) => void;
   recordPurchase: (data: {
@@ -149,12 +151,23 @@ export const useFinanceStore = create<FinanceState>()(
         { id: 'default-bank', name: 'Banco Principal', type: 'bank', initialBalance: 0, color: '#3B82F6' }
       ],
       lessonsProgress: {},
+      hasUnsavedChanges: false,
       setUser: (user) => set({ user }),
+      setSessionId: (sessionId) => set((state) => ({ 
+        user: state.user ? { ...state.user, sessionId } : null 
+      })),
       addMovement: (mv) => set((state) => ({
-        movements: [...state.movements, { ...mv, id: String(Math.random().toString(36).substr(2, 9)), date: new Date().toISOString() }]
+        movements: [...state.movements, { 
+          ...mv, 
+          amount: Number(mv.amount.toFixed(2)),
+          id: String(Math.random().toString(36).substr(2, 9)), 
+          date: new Date().toISOString() 
+        }],
+        hasUnsavedChanges: true
       })),
       addSale: (items, description, customerId, paymentMethod = 'cash', dueDate, accountId) => {
-        const total = items.reduce((acc, item) => acc + (item.price * item.quantity), 0);
+        if (items.length === 0) return;
+        const total = Number(items.reduce((acc, item) => acc + (item.price * item.quantity), 0).toFixed(2));
         const saleId = String(Math.random().toString(36).substr(2, 9));
         const productsState = get().products;
         const customersState = get().customers;
@@ -202,12 +215,13 @@ export const useFinanceStore = create<FinanceState>()(
             products: state.products.map(p => {
               const saleItem = items.find(i => i.productId === p.id);
               return saleItem ? { ...p, stock: p.stock - saleItem.quantity } : p;
-            })
+            }),
+            hasUnsavedChanges: true
           };
         });
       },
       recordPurchase: (data) => {
-        const total = data.cost * data.quantity;
+        const total = Number((data.cost * data.quantity).toFixed(2));
         const purchaseId = String(Math.random().toString(36).substr(2, 9));
         const date = new Date().toISOString();
         const product = get().products.find(p => p.id === data.productId);
@@ -266,7 +280,8 @@ export const useFinanceStore = create<FinanceState>()(
                 };
               }
               return p;
-            })
+            }),
+            hasUnsavedChanges: true
           };
         });
       },
@@ -296,7 +311,8 @@ export const useFinanceStore = create<FinanceState>()(
 
           return {
             accountsPayable: updatedAP,
-            movements: [...state.movements, newMovement]
+            movements: [...state.movements, newMovement],
+            hasUnsavedChanges: true
           };
         });
       },
@@ -326,43 +342,49 @@ export const useFinanceStore = create<FinanceState>()(
 
           return {
             accountsReceivable: updatedAR,
-            movements: [...state.movements, newMovement]
+            movements: [...state.movements, newMovement],
+            hasUnsavedChanges: true
           };
         });
       },
       addProduct: (prod) => set((state) => ({
-        products: [...state.products, { ...prod, id: String(Math.random().toString(36).substr(2, 9)) }]
+        products: [...state.products, { ...prod, id: String(Math.random().toString(36).substr(2, 9)) }],
+        hasUnsavedChanges: true
       })),
       upsertCustomer: (customer) => set((state) => {
         const existingIndex = state.customers.findIndex(c => c.id === customer.id);
         if (existingIndex >= 0) {
           const updatedCustomers = [...state.customers];
           updatedCustomers[existingIndex] = { ...customer, lastUpdated: new Date().toISOString() };
-          return { customers: updatedCustomers };
+          return { customers: updatedCustomers, hasUnsavedChanges: true };
         }
-        return { customers: [...state.customers, { ...customer, lastUpdated: new Date().toISOString() }] };
+        return { customers: [...state.customers, { ...customer, lastUpdated: new Date().toISOString() }], hasUnsavedChanges: true };
       }),
       upsertSupplier: (supplier) => set((state) => {
         const existingIndex = state.suppliers.findIndex(s => s.id === supplier.id);
         if (existingIndex >= 0) {
           const updatedSuppliers = [...state.suppliers];
           updatedSuppliers[existingIndex] = supplier;
-          return { suppliers: updatedSuppliers };
+          return { suppliers: updatedSuppliers, hasUnsavedChanges: true };
         }
-        return { suppliers: [...state.suppliers, supplier] };
+        return { suppliers: [...state.suppliers, supplier], hasUnsavedChanges: true };
       }),
       addAccount: (account) => set((state) => ({
-        accounts: [...state.accounts, { ...account, id: String(Math.random().toString(36).substr(2, 9)) }]
+        accounts: [...state.accounts, { ...account, id: String(Math.random().toString(36).substr(2, 9)) }],
+        hasUnsavedChanges: true
       })),
       updateAccount: (id, data) => set((state) => ({
-        accounts: state.accounts.map(a => a.id === id ? { ...a, ...data } : a)
+        accounts: state.accounts.map(a => a.id === id ? { ...a, ...data } : a),
+        hasUnsavedChanges: true
       })),
       deleteAccount: (id) => set((state) => ({
         accounts: state.accounts.filter(a => a.id !== id),
-        movements: state.movements.map(m => m.accountId === id ? { ...m, accountId: undefined } : m)
+        movements: state.movements.map(m => m.accountId === id ? { ...m, accountId: undefined } : m),
+        hasUnsavedChanges: true
       })),
       updateStock: (id, amount) => set((state) => ({
-        products: state.products.map(p => p.id === id ? { ...p, stock: p.stock + amount } : p)
+        products: state.products.map(p => p.id === id ? { ...p, stock: p.stock + amount } : p),
+        hasUnsavedChanges: true
       })),
       adjustStock: (id, newStock, reason) => set((state) => {
         const product = state.products.find(p => p.id === id);
@@ -384,14 +406,17 @@ export const useFinanceStore = create<FinanceState>()(
 
         return {
           products: state.products.map(p => p.id === id ? { ...p, stock: newStock } : p),
-          movements: [...state.movements, newMovement]
+          movements: [...state.movements, newMovement],
+          hasUnsavedChanges: true
         };
       }),
       updateProduct: (id, data) => set((state) => ({
-        products: state.products.map(p => p.id === id ? { ...p, ...data } : p)
+        products: state.products.map(p => p.id === id ? { ...p, ...data } : p),
+        hasUnsavedChanges: true
       })),
       updateLessonProgress: (id, status, progress) => set((state) => ({
-        lessonsProgress: { ...state.lessonsProgress, [id]: { status, progress } }
+        lessonsProgress: { ...state.lessonsProgress, [id]: { status, progress } },
+        hasUnsavedChanges: true
       })),
       getTotals: () => {
         const { movements, products, accountsPayable, accountsReceivable, accounts } = get();
@@ -443,28 +468,63 @@ export const useFinanceStore = create<FinanceState>()(
         };
       },
       syncLocalToCloud: async () => {
-        const { user, movements, products, customers } = get();
+        const { user, movements, products, customers, suppliers, accounts, accountsPayable, accountsReceivable, lessonsProgress } = get();
         if (!user) throw new Error('Inicia sesión para sincronizar');
         const batch = writeBatch(db);
+        
         products.forEach(p => batch.set(doc(db, `users/${user.uid}/products`, p.id), p));
         movements.forEach(m => batch.set(doc(db, `users/${user.uid}/movements`, m.id), m));
         customers.forEach(c => batch.set(doc(db, `users/${user.uid}/customers`, c.id), c));
+        suppliers.forEach(s => batch.set(doc(db, `users/${user.uid}/suppliers`, s.id), s));
+        accounts.forEach(a => batch.set(doc(db, `users/${user.uid}/accounts`, a.id), a));
+        accountsPayable.forEach(ap => batch.set(doc(db, `users/${user.uid}/accountsPayable`, ap.id), ap));
+        accountsReceivable.forEach(ar => batch.set(doc(db, `users/${user.uid}/accountsReceivable`, ar.id), ar));
+        
+        // Sincronizar progreso de lecciones
+        Object.entries(lessonsProgress).forEach(([id, data]) => {
+          batch.set(doc(db, `users/${user.uid}/lessonsProgress`, id), data);
+        });
+
         await batch.commit();
+        set({ hasUnsavedChanges: false });
       },
       syncCloudToLocal: async () => {
         const { user } = get();
         if (!user) throw new Error('Inicia sesión para restaurar');
-        const [prodSnap, movSnap, custSnap] = await Promise.all([
+        const [prodSnap, movSnap, custSnap, suppSnap, accSnap, apSnap, arSnap, lpSnap] = await Promise.all([
           getDocs(collection(db, `users/${user.uid}/products`)),
           getDocs(collection(db, `users/${user.uid}/movements`)),
-          getDocs(collection(db, `users/${user.uid}/customers`))
+          getDocs(collection(db, `users/${user.uid}/customers`)),
+          getDocs(collection(db, `users/${user.uid}/suppliers`)),
+          getDocs(collection(db, `users/${user.uid}/accounts`)),
+          getDocs(collection(db, `users/${user.uid}/accountsPayable`)),
+          getDocs(collection(db, `users/${user.uid}/accountsReceivable`)),
+          getDocs(collection(db, `users/${user.uid}/lessonsProgress`))
         ]);
+
         const products = prodSnap.docs.map(doc => doc.data() as Product);
         const movements = movSnap.docs.map(doc => doc.data() as Movement);
         const customers = custSnap.docs.map(doc => doc.data() as Customer);
+        const suppliers = suppSnap.docs.map(doc => doc.data() as Supplier);
+        const accounts = accSnap.docs.map(doc => doc.data() as Account);
+        const accountsPayable = apSnap.docs.map(doc => doc.data() as AccountPayable);
+        const accountsReceivable = arSnap.docs.map(doc => doc.data() as AccountReceivable);
+        
+        const lessonsProgress: Record<string, { status: string; progress: number }> = {};
+        lpSnap.docs.forEach(doc => {
+          lessonsProgress[doc.id] = doc.data() as { status: string; progress: number };
+        });
+
         if (products.length > 0) set({ products });
         if (movements.length > 0) set({ movements });
         if (customers.length > 0) set({ customers });
+        if (suppliers.length > 0) set({ suppliers });
+        if (accounts.length > 0) set({ accounts });
+        if (accountsPayable.length > 0) set({ accountsPayable });
+        if (accountsReceivable.length > 0) set({ accountsReceivable });
+        if (Object.keys(lessonsProgress).length > 0) set({ lessonsProgress });
+        
+        set({ hasUnsavedChanges: false });
       }
     }),
     { name: 'finance-storage' }

@@ -8,8 +8,9 @@ import {
   Settings, Shield, HelpCircle, ChevronRight, ArrowLeft
 } from 'lucide-react';
 import { useFinanceStore } from '@/lib/store';
-import { auth, signInWithGoogle } from '@/lib/firebase';
+import { auth, signInWithGoogle, db } from '@/lib/firebase';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
+import { doc, setDoc } from 'firebase/firestore';
 import { cn } from '@/lib/utils';
 
 interface ProfileModuleProps {
@@ -17,7 +18,7 @@ interface ProfileModuleProps {
 }
 
 export default function ProfileModule({ onBack }: ProfileModuleProps) {
-  const { user, setUser, syncLocalToCloud, syncCloudToLocal, getTotals } = useFinanceStore();
+  const { user, setUser, syncLocalToCloud, syncCloudToLocal, getTotals, hasUnsavedChanges } = useFinanceStore();
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [message, setMessage] = useState('');
@@ -26,15 +27,49 @@ export default function ProfileModule({ onBack }: ProfileModuleProps) {
   const handleSignIn = async () => {
     try {
       setLoading(true);
+      setStatus('idle');
+      setMessage('');
       await signInWithGoogle();
+      // user will be set by the listener in Home
       setStatus('success');
-      setMessage('Sesión iniciada correctamente');
-    } catch (error) {
+      setMessage('Conexión solicitada. Verifica si se abrió una ventana emergente.');
+    } catch (error: any) {
+      console.error('Auth error:', error);
       setStatus('error');
-      setMessage('Error al conectar con Google');
+      if (error.code === 'auth/popup-blocked') {
+        setMessage('El navegador bloqueó la ventana. Por favor permítela.');
+      } else if (error.code === 'auth/cancelled-popup-request') {
+        setMessage('Se canceló la solicitud de conexión.');
+      } else {
+        setMessage(error.message || 'Error al conectar con Google');
+      }
     } finally {
       setLoading(false);
-      setTimeout(() => setStatus('idle'), 3000);
+      setTimeout(() => setStatus('idle'), 6000);
+    }
+  };
+
+  const handleSignOut = async () => {
+    if (user && hasUnsavedChanges) {
+      const confirmSignOut = window.confirm(
+        "Tienes cambios sin sincronizar. Si cierras la sesión ahora, los cambios locales podrían perderse si accedes desde otro dispositivo. ¿Deseas cerrar la sesión de todos modos?"
+      );
+      if (!confirmSignOut) return;
+    }
+
+    try {
+      setLoading(true);
+      if (user?.uid) {
+        // Limpiar sesión en Firestore antes de salir
+        const sessionDocRef = doc(db, `users/${user.uid}/session`, 'status');
+        await setDoc(sessionDocRef, { activeSessionId: null }, { merge: true });
+      }
+      await signOut(auth);
+      setUser(null);
+    } catch (error) {
+      console.error('Error signing out:', error);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -114,7 +149,7 @@ export default function ProfileModule({ onBack }: ProfileModuleProps) {
 
         {user ? (
           <button 
-            onClick={() => signOut(auth)}
+            onClick={handleSignOut}
             className="text-zinc-400 hover:text-[#E53030] text-[10px] font-black uppercase tracking-widest flex items-center gap-2 mx-auto transition-colors"
           >
             <LogOut size={12} />
@@ -168,16 +203,24 @@ export default function ProfileModule({ onBack }: ProfileModuleProps) {
             className={cn(
               "p-4 rounded-2xl flex flex-col gap-2 items-start transition-all border",
               user 
-                ? "bg-white border-zinc-100 hover:border-[#12C2A2] shadow-sm active:scale-95" 
+                ? (hasUnsavedChanges ? "bg-amber-50 border-amber-200 shadow-sm active:scale-95" : "bg-white border-zinc-100 hover:border-[#12C2A2] shadow-sm active:scale-95")
                 : "bg-zinc-50 border-transparent opacity-50 cursor-not-allowed"
             )}
           >
-            <div className={cn("w-8 h-8 rounded-lg flex items-center justify-center", user ? "bg-[#F2FAF7] text-[#12C2A2]" : "bg-zinc-200 text-zinc-400")}>
+            <div className={cn(
+              "w-8 h-8 rounded-lg flex items-center justify-center relative", 
+              user ? (hasUnsavedChanges ? "bg-amber-100 text-amber-600" : "bg-[#F2FAF7] text-[#12C2A2]") : "bg-zinc-200 text-zinc-400"
+            )}>
               <Cloud size={16} />
+              {hasUnsavedChanges && (
+                <span className="absolute -top-1 -right-1 w-3 h-3 bg-amber-500 rounded-full border-2 border-white animate-pulse" />
+              )}
             </div>
             <div className="text-left">
               <p className="text-[10px] font-black uppercase text-[#151619]">Subir Info</p>
-              <p className="text-[8px] font-bold text-zinc-400 leading-tight">Guardar progreso actual</p>
+              <p className={cn("text-[8px] font-bold leading-tight", hasUnsavedChanges ? "text-amber-600" : "text-zinc-400")}>
+                {hasUnsavedChanges ? "¡Cargar cambios!" : "Guardar progreso"}
+              </p>
             </div>
           </button>
 
