@@ -67,7 +67,7 @@ export default function GlossaryModal({ onClose }: GlossaryModalProps) {
             </motion.div>
           )) : (
             <div className="py-12 text-center text-zinc-400">
-              <p>No se encontraron términos para "{searchTerm}"</p>
+              <p>No se encontraron términos para &quot;{searchTerm}&quot;</p>
             </div>
           )}
         </div>
