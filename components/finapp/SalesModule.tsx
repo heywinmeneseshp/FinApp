@@ -10,6 +10,7 @@ import {
 import { useFinanceStore } from '@/lib/store';
 import { cn } from '@/lib/utils';
 import WhatsAppReceiptModal from './WhatsAppReceiptModal';
+import { showToast } from './Toast';
 
 interface SalesModuleProps {
   onBack: () => void;
@@ -47,7 +48,7 @@ export default function SalesModule({ onBack }: SalesModuleProps) {
     if (!product) return;
 
     if (product.stock <= 0) {
-      alert("Este producto no tiene stock disponible.");
+      showToast('Este producto no tiene stock disponible.', 'error');
       return;
     }
 
@@ -55,7 +56,7 @@ export default function SalesModule({ onBack }: SalesModuleProps) {
       const existing = prev.find(item => item.productId === productId);
       if (existing) {
         if (existing.quantity >= product.stock) {
-          alert(`Solo quedan ${product.stock} unidades en stock.`);
+          showToast(`Solo quedan ${product.stock} unidades en stock.`, 'error');
           return prev;
         }
         return prev.map(item => item.productId === productId ? { ...item, quantity: item.quantity + 1 } : item);

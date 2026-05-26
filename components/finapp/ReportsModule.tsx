@@ -79,7 +79,7 @@ export default function ReportsModule({ onBack, initialType = 'ingreso' }: Repor
 
   const categories = useMemo(() => {
     const processedCats = movements.flatMap(m => {
-      const cats = [];
+      const cats: string[] = [];
       if (activeType === 'ingreso') {
         if (m.type === 'ingreso') cats.push(m.category);
         if (m.category === 'Compra de Inventario') cats.push('Entrada de Stock');

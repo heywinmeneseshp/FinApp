@@ -2,36 +2,40 @@
 
 import React from 'react';
 import { 
-  LineChart, 
-  Line, 
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip, 
-  ResponsiveContainer, 
-  AreaChart, 
-  Area 
+  AreaChart, Area, XAxis, YAxis, 
+  CartesianGrid, Tooltip, ResponsiveContainer 
 } from 'recharts';
 import { ChevronDown } from 'lucide-react';
-
-const data = [
-  { name: '1', ingresos: 12000, gastos: 10000 },
-  { name: '8', ingresos: 21000, gastos: 12000 },
-  { name: '15', ingresos: 23000, gastos: 14000 },
-  { name: '22', ingresos: 32000, gastos: 16000 },
-  { name: '30', ingresos: 38000, gastos: 14000 },
-];
-
 import { useFinanceStore } from '@/lib/store';
+function buildChartData(movements: { type: string; amount: number; date: string }[]) {
+  const days: Record<string, { ingresos: number; gastos: number }> = {};
+  
+  movements.forEach(m => {
+    const day = new Date(m.date).toISOString().slice(0, 10);
+    if (!days[day]) days[day] = { ingresos: 0, gastos: 0 };
+    if (m.type === 'ingreso') days[day].ingresos += m.amount;
+    else days[day].gastos += m.amount;
+  });
+
+  const sorted = Object.entries(days).sort(([a], [b]) => a.localeCompare(b));
+  
+  return sorted.map(([date, values]) => ({
+    name: new Date(date).getDate().toString(),
+    ingresos: Math.round(values.ingresos),
+    gastos: Math.round(values.gastos),
+  }));
+}
 
 export default function IncomeExpenseChart() {
-  const { getTotals } = useFinanceStore();
+  const { movements, getTotals } = useFinanceStore();
   const totals = getTotals();
   const [isMounted, setIsMounted] = React.useState(false);
 
   React.useEffect(() => {
     setIsMounted(true);
   }, []);
+
+  const chartData = React.useMemo(() => buildChartData(movements), [movements]);
 
   const formatCurrency = (amount: number | undefined | null) => {
     if (!isMounted) return '$0';
@@ -64,7 +68,7 @@ export default function IncomeExpenseChart() {
 
       <div className="h-[200px] w-full">
         <ResponsiveContainer width="100%" height="100%">
-          <AreaChart data={data}>
+          <AreaChart data={chartData.length > 0 ? chartData : [{ name: 'Sin datos', ingresos: 0, gastos: 0 }]}>
             <defs>
               <linearGradient id="colorIngresos" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="5%" stopColor="#12C2A2" stopOpacity={0.1}/>

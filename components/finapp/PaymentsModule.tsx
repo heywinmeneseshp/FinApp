@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { useFinanceStore } from '@/lib/store';
 import { cn } from '@/lib/utils';
+import ConfirmModal from './ConfirmModal';
 
 interface PaymentsModuleProps {
   onBack: () => void;
@@ -28,6 +29,8 @@ export default function PaymentsModule({ onBack }: PaymentsModuleProps) {
 
   const [activeTab, setActiveTab] = useState<PaymentTab>('direct');
   const [isAdding, setIsAdding] = useState(false);
+
+  const [payConfirm, setPayConfirm] = useState<{ isOpen: boolean; billId: string; maxAmount: number }>({ isOpen: false, billId: '', maxAmount: 0 });
 
   const [formData, setFormData] = useState({
     amount: '',
@@ -243,16 +246,11 @@ export default function PaymentsModule({ onBack }: PaymentsModuleProps) {
                     
                     <div className="flex gap-2">
                        <button 
-                        onClick={() => {
-                          const amount = prompt('¿Cuánto deseas abonar/pagar?', String(bill.amount - bill.paidAmount));
-                          if (amount && Number(amount) > 0) {
-                            handlePayAccount(bill.id, Number(amount));
-                          }
-                        }}
-                        className="flex-1 h-12 bg-[#151619] text-white rounded-xl text-xs font-black shadow-lg shadow-zinc-200"
-                      >
-                        PAGAR AHORA
-                      </button>
+                         onClick={() => setPayConfirm({ isOpen: true, billId: bill.id, maxAmount: bill.amount - bill.paidAmount })}
+                         className="flex-1 h-12 bg-[#151619] text-white rounded-xl text-xs font-black shadow-lg shadow-zinc-200"
+                       >
+                         PAGAR AHORA
+                       </button>
                     </div>
                   </div>
                 ))}
@@ -351,6 +349,19 @@ export default function PaymentsModule({ onBack }: PaymentsModuleProps) {
           </div>
         )}
       </AnimatePresence>
+
+      <ConfirmModal
+        isOpen={payConfirm.isOpen}
+        title="Pagar Factura"
+        message={`¿Confirmas el pago de $${payConfirm.maxAmount.toLocaleString()}?`}
+        variant="info"
+        confirmLabel="Pagar Ahora"
+        onConfirm={() => {
+          handlePayAccount(payConfirm.billId, payConfirm.maxAmount);
+          setPayConfirm({ isOpen: false, billId: '', maxAmount: 0 });
+        }}
+        onCancel={() => setPayConfirm({ isOpen: false, billId: '', maxAmount: 0 })}
+      />
     </motion.div>
   );
 }

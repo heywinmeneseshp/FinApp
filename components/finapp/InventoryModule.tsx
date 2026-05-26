@@ -12,6 +12,8 @@ import {
 } from 'lucide-react';
 import { useFinanceStore } from '@/lib/store';
 import { cn } from '@/lib/utils';
+import { generateId } from '@/lib/generate-id';
+import { showToast } from './Toast';
 
 interface InventoryModuleProps {
   onBack: () => void;
@@ -142,7 +144,7 @@ export default function InventoryModule({ onBack }: InventoryModuleProps) {
     const costNum = Number(newProduct.cost);
     
     if (priceNum < 0 || costNum < 0) {
-      alert("El precio y costo no pueden ser negativos");
+      showToast('El precio y costo no pueden ser negativos', 'error');
       return;
     }
 
@@ -166,7 +168,7 @@ export default function InventoryModule({ onBack }: InventoryModuleProps) {
     const costNum = Number(purchaseData.costUnit);
 
     if (quantityNum <= 0 || costNum < 0) {
-      alert("Ingresa una cantidad mayor a 0 y un costo válido.");
+      showToast('Ingresa una cantidad mayor a 0 y un costo válido.', 'error');
       return;
     }
 
@@ -200,7 +202,7 @@ export default function InventoryModule({ onBack }: InventoryModuleProps) {
   const handleAddSupplier = () => {
     if (!newSupplier.name) return;
     upsertSupplier({
-      id: newSupplier.id || String(Math.random().toString(36).substr(2, 9)),
+      id: newSupplier.id || generateId(),
       name: newSupplier.name,
       phone: newSupplier.phone,
       email: newSupplier.email

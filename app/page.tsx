@@ -11,7 +11,8 @@ import {
 import { useFinanceStore } from '@/lib/store';
 import { auth, db } from '@/lib/firebase';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
-import { doc, getDoc, onSnapshot, setDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { generateId } from '@/lib/generate-id';
 import SalesModule from '@/components/finapp/SalesModule';
 import InventoryModule from '@/components/finapp/InventoryModule';
 import LearningModule from '@/components/finapp/LearningModule';
@@ -20,6 +21,8 @@ import ReportsModule from '@/components/finapp/ReportsModule';
 import AccountsModule from '@/components/finapp/AccountsModule';
 import PaymentsModule from '@/components/finapp/PaymentsModule';
 import ProfitDetails from '@/components/finapp/ProfitDetails';
+import ConfirmModal from '@/components/finapp/ConfirmModal';
+import ToastContainer, { showToast } from '@/components/finapp/Toast';
 
 export default function Home() {
   const { getTotals, setUser, user } = useFinanceStore();
@@ -28,6 +31,17 @@ export default function Home() {
   const [reportType, setReportType] = useState<'ingreso' | 'gasto'>('ingreso');
   const [isProfitDetailsOpen, setIsProfitDetailsOpen] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
+  const [confirmState, setConfirmState] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    variant?: 'danger' | 'warning' | 'info';
+    onConfirm: () => void;
+  }>({ isOpen: false, title: '', message: '', onConfirm: () => {} });
+
+  const showConfirm = (title: string, message: string, onConfirm: () => void, variant?: 'danger' | 'warning' | 'info') => {
+    setConfirmState({ isOpen: true, title, message, variant, onConfirm });
+  };
 
   useEffect(() => {
     setIsMounted(true);
@@ -42,14 +56,14 @@ export default function Home() {
           const data = docSnap.data();
           // Si hay una sesión activa y no es de este mismo dispositivo (opcional: añadir check de timestamp para sesiones muertas)
           if (data.activeSessionId) {
-            alert("Ya tienes una sesión activa en otro dispositivo. Por favor cierra esa sesión para poder ingresar aquí.");
+            showToast('Sesión activa en otro dispositivo', 'error');
             await signOut(auth);
             setUser(null);
             return;
           }
         }
 
-        const newSessionId = Date.now().toString() + Math.random().toString(36).substring(2);
+        const newSessionId = generateId();
         
         setUser({ 
           uid: firebaseUser.uid, 
@@ -103,6 +117,15 @@ export default function Home() {
 
   return (
     <main className="min-h-screen bg-[#F8F9FA] pb-24">
+      <ToastContainer />
+      <ConfirmModal
+        isOpen={confirmState.isOpen}
+        title={confirmState.title}
+        message={confirmState.message}
+        variant={confirmState.variant}
+        onConfirm={() => { confirmState.onConfirm(); setConfirmState(prev => ({ ...prev, isOpen: false })); }}
+        onCancel={() => setConfirmState(prev => ({ ...prev, isOpen: false }))}
+      />
       <AnimatePresence>
         {isProfitDetailsOpen && (
           <ProfitDetails isOpen={isProfitDetailsOpen} onClose={() => setIsProfitDetailsOpen(false)} />

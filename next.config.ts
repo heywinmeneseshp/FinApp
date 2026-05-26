@@ -19,7 +19,8 @@ const nextConfig: NextConfig = {
       },
     ],
   },
-  output: 'standalone',
+  // Usamos 'export' para build estático compatible con Capacitor y hosting estático
+  output: 'export',
   transpilePackages: ['motion'],
   webpack: (config, {dev}) => {
     // HMR is disabled in AI Studio via DISABLE_HMR env var.

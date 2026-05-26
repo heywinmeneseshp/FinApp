@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { useFinanceStore } from '@/lib/store';
 import { cn } from '@/lib/utils';
+import ConfirmModal from './ConfirmModal';
 
 interface AccountsModuleProps {
   onBack: () => void;
@@ -18,6 +19,7 @@ export default function AccountsModule({ onBack }: AccountsModuleProps) {
   const { accounts, movements, addAccount, updateAccount, deleteAccount } = useFinanceStore();
   const [isAdding, setIsAdding] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [deleteConfirm, setDeleteConfirm] = useState<{ isOpen: boolean; accountId: string }>({ isOpen: false, accountId: '' });
   
   const [formData, setFormData] = useState({
     name: '',
@@ -134,11 +136,7 @@ export default function AccountsModule({ onBack }: AccountsModuleProps) {
                   </button>
                   {accounts.length > 1 && (
                     <button 
-                      onClick={() => {
-                        if(confirm('¿Eliminar esta cuenta? Los movimientos asociados quedarán sin cuenta asignada.')) {
-                          deleteAccount(account.id);
-                        }
-                      }}
+                      onClick={() => setDeleteConfirm({ isOpen: true, accountId: account.id })}
                       className="p-2 text-zinc-400 hover:text-red-500 transition-colors"
                     >
                       <Trash2 size={16} />
@@ -260,6 +258,19 @@ export default function AccountsModule({ onBack }: AccountsModuleProps) {
           </div>
         )}
       </AnimatePresence>
+
+      <ConfirmModal
+        isOpen={deleteConfirm.isOpen}
+        title="Eliminar Cuenta"
+        message="¿Eliminar esta cuenta? Los movimientos asociados quedarán sin cuenta asignada."
+        variant="danger"
+        confirmLabel="Eliminar"
+        onConfirm={() => {
+          deleteAccount(deleteConfirm.accountId);
+          setDeleteConfirm({ isOpen: false, accountId: '' });
+        }}
+        onCancel={() => setDeleteConfirm({ isOpen: false, accountId: '' })}
+      />
     </motion.div>
   );
 }

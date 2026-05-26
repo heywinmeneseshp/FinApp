@@ -12,6 +12,7 @@ import { auth, signInWithGoogle, db } from '@/lib/firebase';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { doc, setDoc } from 'firebase/firestore';
 import { cn } from '@/lib/utils';
+import ConfirmModal from './ConfirmModal';
 
 interface ProfileModuleProps {
   onBack: () => void;
@@ -22,6 +23,7 @@ export default function ProfileModule({ onBack }: ProfileModuleProps) {
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [message, setMessage] = useState('');
+  const [showSignOutConfirm, setShowSignOutConfirm] = useState(false);
   const totals = getTotals();
 
   const handleSignIn = async () => {
@@ -51,12 +53,14 @@ export default function ProfileModule({ onBack }: ProfileModuleProps) {
 
   const handleSignOut = async () => {
     if (user && hasUnsavedChanges) {
-      const confirmSignOut = window.confirm(
-        "Tienes cambios sin sincronizar. Si cierras la sesión ahora, los cambios locales podrían perderse si accedes desde otro dispositivo. ¿Deseas cerrar la sesión de todos modos?"
-      );
-      if (!confirmSignOut) return;
+      setShowSignOutConfirm(true);
+      return;
     }
 
+    await performSignOut();
+  };
+
+  const performSignOut = async () => {
     try {
       setLoading(true);
       if (user?.uid) {
@@ -276,6 +280,19 @@ export default function ProfileModule({ onBack }: ProfileModuleProps) {
           </button>
         ))}
       </div>
+
+      <ConfirmModal
+        isOpen={showSignOutConfirm}
+        title="¿Cerrar Sesión?"
+        message="Tienes cambios sin sincronizar. Si cierras la sesión ahora, los cambios locales podrían perderse si accedes desde otro dispositivo. ¿Deseas cerrar la sesión de todos modos?"
+        variant="warning"
+        confirmLabel="Cerrar Sesión"
+        onConfirm={() => {
+          setShowSignOutConfirm(false);
+          performSignOut();
+        }}
+        onCancel={() => setShowSignOutConfirm(false)}
+      />
 
       <div className="text-center pt-4">
         <p className="text-[10px] font-bold text-zinc-300 uppercase tracking-widest">FinApp Profesional v1.0.4</p>

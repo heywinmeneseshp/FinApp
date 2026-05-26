@@ -1,7 +1,9 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { persist, createJSONStorage } from 'zustand/middleware';
 import { db } from './firebase';
 import { collection, doc, writeBatch, getDocs, setDoc } from 'firebase/firestore';
+import { generateId } from './generate-id';
+import { robustStorage } from './storage';
 
 interface Customer {
   id: string; 
@@ -89,6 +91,8 @@ interface FinanceState {
   accounts: Account[];
   lessonsProgress: Record<string, { status: string; progress: number }>;
   hasUnsavedChanges: boolean;
+  syncVersion: number;
+  lastCloudSync: string | null;
   setUser: (user: { uid: string; email: string | null; sessionId?: string } | null) => void;
   setSessionId: (sessionId: string) => void;
   addMovement: (movement: Omit<Movement, 'id' | 'date'>) => void;
@@ -128,6 +132,7 @@ interface FinanceState {
   };
   syncLocalToCloud: () => Promise<void>;
   syncCloudToLocal: () => Promise<void>;
+  setSyncVersion: (v: number) => void;
 }
 
 export const useFinanceStore = create<FinanceState>()(
@@ -152,7 +157,10 @@ export const useFinanceStore = create<FinanceState>()(
       ],
       lessonsProgress: {},
       hasUnsavedChanges: false,
+      syncVersion: 0,
+      lastCloudSync: null,
       setUser: (user) => set({ user }),
+      setSyncVersion: (v) => set({ syncVersion: v }),
       setSessionId: (sessionId) => set((state) => ({ 
         user: state.user ? { ...state.user, sessionId } : null 
       })),
@@ -160,7 +168,7 @@ export const useFinanceStore = create<FinanceState>()(
         movements: [...state.movements, { 
           ...mv, 
           amount: Number(mv.amount.toFixed(2)),
-          id: String(Math.random().toString(36).substr(2, 9)), 
+          id: generateId(), 
           date: new Date().toISOString() 
         }],
         hasUnsavedChanges: true
@@ -168,7 +176,7 @@ export const useFinanceStore = create<FinanceState>()(
       addSale: (items, description, customerId, paymentMethod = 'cash', dueDate, accountId) => {
         if (items.length === 0) return;
         const total = Number(items.reduce((acc, item) => acc + (item.price * item.quantity), 0).toFixed(2));
-        const saleId = String(Math.random().toString(36).substr(2, 9));
+        const saleId = generateId();
         const productsState = get().products;
         const customersState = get().customers;
         
@@ -222,7 +230,7 @@ export const useFinanceStore = create<FinanceState>()(
       },
       recordPurchase: (data) => {
         const total = Number((data.cost * data.quantity).toFixed(2));
-        const purchaseId = String(Math.random().toString(36).substr(2, 9));
+        const purchaseId = generateId();
         const date = new Date().toISOString();
         const product = get().products.find(p => p.id === data.productId);
 
@@ -298,7 +306,7 @@ export const useFinanceStore = create<FinanceState>()(
           updatedAP[apIndex] = { ...ap, paidAmount: newPaidAmount, status: newStatus };
 
           const newMovement: Movement = {
-            id: String(Math.random().toString(36).substr(2, 9)),
+            id: generateId(),
             type: 'gasto',
             amount: amount,
             category: 'Pago a Proveedor',
@@ -329,7 +337,7 @@ export const useFinanceStore = create<FinanceState>()(
           updatedAR[arIndex] = { ...ar, paidAmount: newPaidAmount, status: newStatus };
 
           const newMovement: Movement = {
-            id: String(Math.random().toString(36).substr(2, 9)),
+            id: generateId(),
             type: 'ingreso',
             amount: amount,
             category: 'Cobro a Cliente',
@@ -348,7 +356,7 @@ export const useFinanceStore = create<FinanceState>()(
         });
       },
       addProduct: (prod) => set((state) => ({
-        products: [...state.products, { ...prod, id: String(Math.random().toString(36).substr(2, 9)) }],
+        products: [...state.products, { ...prod, id: generateId() }],
         hasUnsavedChanges: true
       })),
       upsertCustomer: (customer) => set((state) => {
@@ -370,7 +378,7 @@ export const useFinanceStore = create<FinanceState>()(
         return { suppliers: [...state.suppliers, supplier], hasUnsavedChanges: true };
       }),
       addAccount: (account) => set((state) => ({
-        accounts: [...state.accounts, { ...account, id: String(Math.random().toString(36).substr(2, 9)) }],
+        accounts: [...state.accounts, { ...account, id: generateId() }],
         hasUnsavedChanges: true
       })),
       updateAccount: (id, data) => set((state) => ({
@@ -393,7 +401,7 @@ export const useFinanceStore = create<FinanceState>()(
         const diff = newStock - product.stock;
         if (diff === 0) return state;
 
-        const adjustmentId = Math.random().toString(36).substr(2, 9);
+        const adjustmentId = generateId();
         const newMovement: Movement = {
           id: adjustmentId,
           type: diff > 0 ? 'ingreso' : 'gasto',
@@ -470,28 +478,39 @@ export const useFinanceStore = create<FinanceState>()(
       syncLocalToCloud: async () => {
         const { user, movements, products, customers, suppliers, accounts, accountsPayable, accountsReceivable, lessonsProgress } = get();
         if (!user) throw new Error('Inicia sesión para sincronizar');
+
+        const newVersion = Date.now();
         const batch = writeBatch(db);
         
-        products.forEach(p => batch.set(doc(db, `users/${user.uid}/products`, p.id), p));
-        movements.forEach(m => batch.set(doc(db, `users/${user.uid}/movements`, m.id), m));
-        customers.forEach(c => batch.set(doc(db, `users/${user.uid}/customers`, c.id), c));
-        suppliers.forEach(s => batch.set(doc(db, `users/${user.uid}/suppliers`, s.id), s));
-        accounts.forEach(a => batch.set(doc(db, `users/${user.uid}/accounts`, a.id), a));
-        accountsPayable.forEach(ap => batch.set(doc(db, `users/${user.uid}/accountsPayable`, ap.id), ap));
-        accountsReceivable.forEach(ar => batch.set(doc(db, `users/${user.uid}/accountsReceivable`, ar.id), ar));
+        const writeWithVersion = (refPath: string, data: Record<string, unknown>) => {
+          batch.set(doc(db, refPath), { ...data, _syncVersion: newVersion, _syncedAt: new Date().toISOString() });
+        };
+
+        products.forEach(p => writeWithVersion(`users/${user.uid}/products/${p.id}`, p as unknown as Record<string, unknown>));
+        movements.forEach(m => writeWithVersion(`users/${user.uid}/movements/${m.id}`, m as unknown as Record<string, unknown>));
+        customers.forEach(c => writeWithVersion(`users/${user.uid}/customers/${c.id}`, c as unknown as Record<string, unknown>));
+        suppliers.forEach(s => writeWithVersion(`users/${user.uid}/suppliers/${s.id}`, s as unknown as Record<string, unknown>));
+        accounts.forEach(a => writeWithVersion(`users/${user.uid}/accounts/${a.id}`, a as unknown as Record<string, unknown>));
+        accountsPayable.forEach(ap => writeWithVersion(`users/${user.uid}/accountsPayable/${ap.id}`, ap as unknown as Record<string, unknown>));
+        accountsReceivable.forEach(ar => writeWithVersion(`users/${user.uid}/accountsReceivable/${ar.id}`, ar as unknown as Record<string, unknown>));
         
-        // Sincronizar progreso de lecciones
         Object.entries(lessonsProgress).forEach(([id, data]) => {
-          batch.set(doc(db, `users/${user.uid}/lessonsProgress`, id), data);
+          writeWithVersion(`users/${user.uid}/lessonsProgress/${id}`, data as unknown as Record<string, unknown>);
+        });
+
+        batch.set(doc(db, `users/${user.uid}/_meta`, 'sync'), {
+          lastSyncVersion: newVersion,
+          lastSyncAt: new Date().toISOString(),
         });
 
         await batch.commit();
-        set({ hasUnsavedChanges: false });
+        set({ hasUnsavedChanges: false, syncVersion: newVersion, lastCloudSync: new Date().toISOString() });
       },
       syncCloudToLocal: async () => {
-        const { user } = get();
+        const { user, syncVersion } = get();
         if (!user) throw new Error('Inicia sesión para restaurar');
-        const [prodSnap, movSnap, custSnap, suppSnap, accSnap, apSnap, arSnap, lpSnap] = await Promise.all([
+
+        const [prodSnap, movSnap, custSnap, suppSnap, accSnap, apSnap, arSnap, lpSnap, metaSnap] = await Promise.all([
           getDocs(collection(db, `users/${user.uid}/products`)),
           getDocs(collection(db, `users/${user.uid}/movements`)),
           getDocs(collection(db, `users/${user.uid}/customers`)),
@@ -499,34 +518,46 @@ export const useFinanceStore = create<FinanceState>()(
           getDocs(collection(db, `users/${user.uid}/accounts`)),
           getDocs(collection(db, `users/${user.uid}/accountsPayable`)),
           getDocs(collection(db, `users/${user.uid}/accountsReceivable`)),
-          getDocs(collection(db, `users/${user.uid}/lessonsProgress`))
+          getDocs(collection(db, `users/${user.uid}/lessonsProgress`)),
+          getDocs(collection(db, `users/${user.uid}/_meta`))
         ]);
 
-        const products = prodSnap.docs.map(doc => doc.data() as Product);
-        const movements = movSnap.docs.map(doc => doc.data() as Movement);
-        const customers = custSnap.docs.map(doc => doc.data() as Customer);
-        const suppliers = suppSnap.docs.map(doc => doc.data() as Supplier);
-        const accounts = accSnap.docs.map(doc => doc.data() as Account);
-        const accountsPayable = apSnap.docs.map(doc => doc.data() as AccountPayable);
-        const accountsReceivable = arSnap.docs.map(doc => doc.data() as AccountReceivable);
+        const stripMeta = <T>(data: Record<string, unknown>): T => {
+          const { _syncVersion, _syncedAt, ...rest } = data;
+          return rest as T;
+        };
+
+        const products = prodSnap.docs.map(doc => stripMeta<Product>(doc.data() as Record<string, unknown>));
+        const movements = movSnap.docs.map(doc => stripMeta<Movement>(doc.data() as Record<string, unknown>));
+        const customers = custSnap.docs.map(doc => stripMeta<Customer>(doc.data() as Record<string, unknown>));
+        const suppliers = suppSnap.docs.map(doc => stripMeta<Supplier>(doc.data() as Record<string, unknown>));
+        const accounts = accSnap.docs.map(doc => stripMeta<Account>(doc.data() as Record<string, unknown>));
+        const accountsPayable = apSnap.docs.map(doc => stripMeta<AccountPayable>(doc.data() as Record<string, unknown>));
+        const accountsReceivable = arSnap.docs.map(doc => stripMeta<AccountReceivable>(doc.data() as Record<string, unknown>));
         
         const lessonsProgress: Record<string, { status: string; progress: number }> = {};
         lpSnap.docs.forEach(doc => {
-          lessonsProgress[doc.id] = doc.data() as { status: string; progress: number };
+          const data = stripMeta<{ status: string; progress: number }>(doc.data() as Record<string, unknown>);
+          lessonsProgress[doc.id] = data;
         });
 
-        if (products.length > 0) set({ products });
-        if (movements.length > 0) set({ movements });
-        if (customers.length > 0) set({ customers });
-        if (suppliers.length > 0) set({ suppliers });
-        if (accounts.length > 0) set({ accounts });
-        if (accountsPayable.length > 0) set({ accountsPayable });
-        if (accountsReceivable.length > 0) set({ accountsReceivable });
-        if (Object.keys(lessonsProgress).length > 0) set({ lessonsProgress });
-        
-        set({ hasUnsavedChanges: false });
+        const cloudVersion = metaSnap.docs.find(d => d.id === 'sync')?.data()?.lastSyncVersion || 0;
+
+        if (cloudVersion >= syncVersion) {
+          if (products.length > 0) set({ products });
+          if (movements.length > 0) set({ movements });
+          if (customers.length > 0) set({ customers });
+          if (suppliers.length > 0) set({ suppliers });
+          if (accounts.length > 0) set({ accounts });
+          if (accountsPayable.length > 0) set({ accountsPayable });
+          if (accountsReceivable.length > 0) set({ accountsReceivable });
+          if (Object.keys(lessonsProgress).length > 0) set({ lessonsProgress });
+          set({ hasUnsavedChanges: false, syncVersion: cloudVersion, lastCloudSync: new Date().toISOString() });
+        } else {
+          throw new Error('Los datos locales son más recientes que la nube. Sube tus cambios primero.');
+        }
       }
     }),
-    { name: 'finance-storage' }
+    { name: 'finance-storage', storage: createJSONStorage(() => robustStorage) }
   )
 );
