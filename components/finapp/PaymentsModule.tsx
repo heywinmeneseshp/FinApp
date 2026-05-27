@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
@@ -182,7 +182,7 @@ export default function PaymentsModule({ onBack }: PaymentsModuleProps) {
             </div>
 
             <div className="pt-4">
-              <h3 className="text-xs font-black text-zinc-400 uppercase tracking-widest px-2 mb-4">Últimos Gastos</h3>
+              <h3 className="text-xs font-black text-zinc-400 uppercase tracking-widest px-2 mb-4">Ãšltimos Gastos</h3>
               <div className="space-y-3">
                 {movements
                   .filter(m => m.type === 'gasto' && m.category !== 'Compra de Inventario')

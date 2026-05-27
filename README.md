@@ -1,20 +1,35 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://ai.google.dev/static/site-assets/images/share-ais-513315318.png" />
-</div>
+# FinApp Profesional
 
-# Run and deploy your AI Studio app
+Aplicacion financiera para emprendedores, construida con Next.js, React, NextAuth,
+MySQL y soporte offline para Capacitor/SQLite.
 
-This contains everything you need to run your app locally.
+## Requisitos
 
-View your app in AI Studio: https://ai.studio/apps/d1e5c932-cb91-4bce-8448-3973d3ac3c7d
+- Node.js 20+
+- MySQL o MariaDB
+- Variables de entorno basadas en `.env.example`
 
-## Run Locally
+## Desarrollo
 
-**Prerequisites:**  Node.js
-
-
-1. Install dependencies:
+1. Instala dependencias:
    `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
+2. Copia `.env.example` a `.env.local` y configura `DB_*`, `NEXTAUTH_SECRET`
+   y `NEXTAUTH_URL`.
+3. Crea o actualiza la base de datos:
+   `npm run migrate`
+4. Ejecuta la app:
    `npm run dev`
+
+## Scripts
+
+- `npm run dev`: servidor local de Next.js.
+- `npm run build`: build de produccion.
+- `npm run start`: servidor de produccion.
+- `npm run lint`: revision ESLint.
+- `npm test`: pruebas unitarias.
+- `npm run migrate`: aplica `database/schema.sql` en MySQL/MariaDB.
+
+## Notas
+
+Los directorios `.next/`, `out/`, `node_modules/` y `coverage/` son generados y
+no deben versionarse.

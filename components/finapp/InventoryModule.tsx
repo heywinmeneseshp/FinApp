@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
@@ -13,6 +13,7 @@ import {
 import { useFinanceStore } from '@/lib/store';
 import { cn } from '@/lib/utils';
 import { generateId } from '@/lib/generate-id';
+import { useHasMounted } from '@/hooks/useHasMounted';
 import { showToast } from './Toast';
 
 interface InventoryModuleProps {
@@ -37,7 +38,7 @@ export default function InventoryModule({ onBack }: InventoryModuleProps) {
   const [isShowingHistory, setIsShowingHistory] = useState(false);
   const [dateRange, setDateRange] = useState({ start: '', end: '' });
   const [selectedProductForAdjustment, setSelectedProductForAdjustment] = useState<any>(null);
-  const [isMounted, setIsMounted] = useState(false);
+  const isMounted = useHasMounted();
 
   const totals = getTotals();
 
@@ -86,10 +87,6 @@ export default function InventoryModule({ onBack }: InventoryModuleProps) {
   const totalInventoryFlowValue = inventoryMovements.reduce((acc, m) => {
     return m.isPhysicalEntrance ? acc + m.inventoryValue : acc - m.inventoryValue;
   }, 0);
-
-  React.useEffect(() => {
-    setIsMounted(true);
-  }, []);
 
   const formatCurrency = (amount: number | undefined | null) => {
     if (!isMounted) return '$0';
@@ -1030,7 +1027,7 @@ export default function InventoryModule({ onBack }: InventoryModuleProps) {
                                </div>
                              )}
                           </div>
-                          <p className="text-[10px] text-zinc-400 font-bold uppercase ml-4">{new Date(adj.date).toLocaleDateString()} · {new Date(adj.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
+                          <p className="text-[10px] text-zinc-400 font-bold uppercase ml-4">{new Date(adj.date).toLocaleDateString()} Â· {new Date(adj.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
                         </div>
                         <div className="text-right">
                           <p className={cn(

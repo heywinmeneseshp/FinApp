@@ -8,11 +8,9 @@ import {
   LayoutDashboard, ShoppingBag, GraduationCap, Box,
   ChevronRight, User
 } from 'lucide-react';
-import { useFinanceStore } from '@/lib/store';
-import { auth, db } from '@/lib/firebase';
-import { onAuthStateChanged, signOut } from 'firebase/auth';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
-import { generateId } from '@/lib/generate-id';
+import { useFinanceStore, hydrateStoreFromLocalDb } from '@/lib/store';
+import { useSession } from 'next-auth/react';
+import { useHasMounted } from '@/hooks/useHasMounted';
 import SalesModule from '@/components/finapp/SalesModule';
 import InventoryModule from '@/components/finapp/InventoryModule';
 import LearningModule from '@/components/finapp/LearningModule';
@@ -20,17 +18,19 @@ import ProfileModule from '@/components/finapp/ProfileModule';
 import ReportsModule from '@/components/finapp/ReportsModule';
 import AccountsModule from '@/components/finapp/AccountsModule';
 import PaymentsModule from '@/components/finapp/PaymentsModule';
+import AccountsReceivableModule from '@/components/finapp/AccountsReceivableModule';
+import AccountsPayableModule from '@/components/finapp/AccountsPayableModule';
 import ProfitDetails from '@/components/finapp/ProfitDetails';
 import ConfirmModal from '@/components/finapp/ConfirmModal';
-import ToastContainer, { showToast } from '@/components/finapp/Toast';
+import ToastContainer from '@/components/finapp/Toast';
 
 export default function Home() {
   const { getTotals, setUser, user } = useFinanceStore();
   const totals = getTotals();
-  const [activeView, setActiveView] = useState<'main' | 'sales' | 'inventory' | 'learning' | 'profile' | 'reports' | 'accounts' | 'payments'>('main');
+  const [activeView, setActiveView] = useState<'main' | 'sales' | 'inventory' | 'learning' | 'profile' | 'reports' | 'accounts' | 'payments' | 'receivables' | 'payables'>('main');
   const [reportType, setReportType] = useState<'ingreso' | 'gasto'>('ingreso');
   const [isProfitDetailsOpen, setIsProfitDetailsOpen] = useState(false);
-  const [isMounted, setIsMounted] = useState(false);
+  const isMounted = useHasMounted();
   const [confirmState, setConfirmState] = useState<{
     isOpen: boolean;
     title: string;
@@ -39,60 +39,19 @@ export default function Home() {
     onConfirm: () => void;
   }>({ isOpen: false, title: '', message: '', onConfirm: () => {} });
 
-  const showConfirm = (title: string, message: string, onConfirm: () => void, variant?: 'danger' | 'warning' | 'info') => {
-    setConfirmState({ isOpen: true, title, message, variant, onConfirm });
-  };
+  useEffect(() => {
+    hydrateStoreFromLocalDb();
+  }, []);
+
+  const { data: session } = useSession();
 
   useEffect(() => {
-    setIsMounted(true);
-
-    const unsubscribeAuth = onAuthStateChanged(auth, async (firebaseUser) => {
-      if (firebaseUser) {
-        // Verificar si ya hay una sesión activa antes de proceder
-        const sessionDocRef = doc(db, `users/${firebaseUser.uid}/session`, 'status');
-        const docSnap = await getDoc(sessionDocRef);
-        
-        if (docSnap.exists()) {
-          const data = docSnap.data();
-          // Si hay una sesión activa y no es de este mismo dispositivo (opcional: añadir check de timestamp para sesiones muertas)
-          if (data.activeSessionId) {
-            showToast('Sesión activa en otro dispositivo', 'error');
-            await signOut(auth);
-            setUser(null);
-            return;
-          }
-        }
-
-        const newSessionId = generateId();
-        
-        setUser({ 
-          uid: firebaseUser.uid, 
-          email: firebaseUser.email,
-          sessionId: newSessionId
-        });
-
-        try {
-          await setDoc(sessionDocRef, {
-            activeSessionId: newSessionId,
-            lastLogin: new Date().toISOString(),
-            device: typeof window !== 'undefined' ? navigator.userAgent : 'unknown'
-          });
-
-          // Limpiar sesión al cerrar la pestaña/ventana
-          const handleUnload = () => {
-            setDoc(sessionDocRef, { activeSessionId: null }, { merge: true });
-          };
-          window.addEventListener('beforeunload', handleUnload);
-        } catch (error) {
-          console.error("Error setting session:", error);
-        }
-      } else {
-        setUser(null);
-      }
-    });
-
-    return () => unsubscribeAuth();
-  }, [setUser]);
+    if (session?.user) {
+      setUser({ uid: session.user.id, email: session.user.email ?? null });
+    } else if (session === null) {
+      setUser(null);
+    }
+  }, [session, setUser]);
 
   const formatCurrency = (amount: number | undefined | null) => {
     if (!isMounted) return '$0';
@@ -175,20 +134,28 @@ export default function Home() {
           </div>
 
           <div className="grid grid-cols-3 gap-3 pt-2">
-            <div className="bg-zinc-800/30 p-3 rounded-2xl border border-white/5">
+            <motion.button
+              whileTap={{ scale: 0.95 }}
+              onClick={() => setActiveView('receivables')}
+              className="bg-zinc-800/30 p-3 rounded-2xl border border-white/5 text-left transition-all hover:bg-zinc-800/50"
+            >
               <div className="flex items-center gap-1.5 text-blue-400 mb-1">
                 <HeartHandshake size={12} />
                 <span className="text-[8px] font-black uppercase tracking-tighter">CxC</span>
               </div>
               <p className="text-sm font-bold truncate">{formatCurrency(totals.totalAR)}</p>
-            </div>
-            <div className="bg-zinc-800/30 p-3 rounded-2xl border border-white/5">
+            </motion.button>
+            <motion.button
+              whileTap={{ scale: 0.95 }}
+              onClick={() => setActiveView('payables')}
+              className="bg-zinc-800/30 p-3 rounded-2xl border border-white/5 text-left transition-all hover:bg-zinc-800/50"
+            >
               <div className="flex items-center gap-1.5 text-orange-400 mb-1">
                 <CreditCard size={12} />
                 <span className="text-[8px] font-black uppercase tracking-tighter">CxP</span>
               </div>
               <p className="text-sm font-bold truncate">{formatCurrency(totals.totalAP)}</p>
-            </div>
+            </motion.button>
             <motion.button 
               whileTap={{ scale: 0.95 }}
               onClick={() => setIsProfitDetailsOpen(true)}
@@ -253,6 +220,12 @@ export default function Home() {
           )}
           {activeView === 'payments' && (
             <PaymentsModule onBack={() => setActiveView('main')} />
+          )}
+          {activeView === 'receivables' && (
+            <AccountsReceivableModule onBack={() => setActiveView('main')} />
+          )}
+          {activeView === 'payables' && (
+            <AccountsPayableModule onBack={() => setActiveView('main')} />
           )}
         </AnimatePresence>
       </div>

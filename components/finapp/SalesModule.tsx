@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { useFinanceStore } from '@/lib/store';
 import { cn } from '@/lib/utils';
+import { useHasMounted } from '@/hooks/useHasMounted';
 import WhatsAppReceiptModal from './WhatsAppReceiptModal';
 import { showToast } from './Toast';
 
@@ -25,11 +26,7 @@ export default function SalesModule({ onBack }: SalesModuleProps) {
   const [cart, setCart] = useState<{ productId: string; quantity: number }[]>([]);
   const [showWhatsAppModal, setShowWhatsAppModal] = useState(false);
   const [lastSaleData, setLastSaleData] = useState<any>(null);
-  const [isMounted, setIsMounted] = useState(false);
-
-  React.useEffect(() => {
-    setIsMounted(true);
-  }, []);
+  const isMounted = useHasMounted();
 
   const formatCurrency = (amount: number | undefined | null) => {
     if (!isMounted) return '$0';

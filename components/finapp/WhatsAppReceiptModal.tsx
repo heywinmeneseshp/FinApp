@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
@@ -29,11 +29,13 @@ export default function WhatsAppReceiptModal({ isOpen, onClose, saleData }: What
     if (idNumber.length > 5) {
       const existing = customers.find(c => c.id === idNumber);
       if (existing) {
-        setName(existing.name);
-        setEmail(existing.email);
-        setPhoneNumber(existing.phone);
-        setAcceptedReceipt(existing.acceptedReceipt);
-        setAcceptedPromotions(existing.acceptedPromotions);
+        queueMicrotask(() => {
+          setName(existing.name);
+          setEmail(existing.email);
+          setPhoneNumber(existing.phone);
+          setAcceptedReceipt(existing.acceptedReceipt);
+          setAcceptedPromotions(existing.acceptedPromotions);
+        });
       }
     }
   }, [idNumber, customers]);
@@ -56,18 +58,18 @@ export default function WhatsAppReceiptModal({ isOpen, onClose, saleData }: What
       .map(item => {
         const itemPrice = item.price || 0;
         const itemQuantity = item.quantity || 0;
-        return `• ${itemQuantity}x ${item.name} ($${(itemPrice * itemQuantity).toLocaleString()})`;
+        return `- ${itemQuantity}x ${item.name} ($${(itemPrice * itemQuantity).toLocaleString()})`;
       })
       .join('\n');
 
-    const messageText = `¡Hola ${name}! 👋 Muchas gracias por tu compra en nuestro negocio. ✨\n\n` +
-      `🛍️ *Detalle de tu Pedido:*\n` +
+    const messageText = `¡Hola ${name}! ðŸ‘‹ Muchas gracias por tu compra en nuestro negocio. âœ¨\n\n` +
+      `ðŸ›ï¸ *Detalle de tu Pedido:*\n` +
       `----------------------------\n` +
       `${itemsList}\n` +
       `----------------------------\n` +
-      `💰 *Total a pagar: $${(saleData.total || 0).toLocaleString()}*\n\n` +
-      `📅 Fecha: ${saleData.date}\n\n` +
-      `¡Esperamos verte pronto! 🌿✨`;
+      `ðŸ’° *Total a pagar: $${(saleData.total || 0).toLocaleString()}*\n\n` +
+      `ðŸ“… Fecha: ${saleData.date}\n\n` +
+      `¡Esperamos verte pronto! ðŸŒ¿âœ¨`;
 
     const url = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(messageText)}`;
     window.open(url, '_blank');

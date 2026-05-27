@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
@@ -8,9 +8,7 @@ import {
   Settings, Shield, HelpCircle, ChevronRight, ArrowLeft
 } from 'lucide-react';
 import { useFinanceStore } from '@/lib/store';
-import { auth, signInWithGoogle, db } from '@/lib/firebase';
-import { onAuthStateChanged, signOut } from 'firebase/auth';
-import { doc, setDoc } from 'firebase/firestore';
+import { signInWithGoogle, signOutFirebase } from '@/lib/firebase';
 import { cn } from '@/lib/utils';
 import ConfirmModal from './ConfirmModal';
 
@@ -63,12 +61,7 @@ export default function ProfileModule({ onBack }: ProfileModuleProps) {
   const performSignOut = async () => {
     try {
       setLoading(true);
-      if (user?.uid) {
-        // Limpiar sesión en Firestore antes de salir
-        const sessionDocRef = doc(db, `users/${user.uid}/session`, 'status');
-        await setDoc(sessionDocRef, { activeSessionId: null }, { merge: true });
-      }
-      await signOut(auth);
+      await signOutFirebase();
       setUser(null);
     } catch (error) {
       console.error('Error signing out:', error);

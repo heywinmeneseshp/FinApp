@@ -1,6 +1,0 @@
-{
-  "name": "FinApp Profesional",
-  "description": "Aplicación financiera profesional para emprendedores con sincronización en la nube y gestión de clientes.",
-  "requestFramePermissions": [],
-  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
-}

@@ -1,8 +1,6 @@
-import type { Metadata } from 'next';
-import { Inter } from 'next/font/google';
+﻿import type { Metadata } from 'next';
 import './globals.css';
-
-const inter = Inter({ subsets: ['latin'] });
+import ClientSessionProvider from './ClientSessionProvider';
 
 export const metadata: Metadata = {
   title: 'FinApp Profesional',
@@ -16,7 +14,9 @@ export default function RootLayout({
 }) {
   return (
     <html lang="es">
-      <body className={inter.className}>{children}</body>
+      <body>
+        <ClientSessionProvider>{children}</ClientSessionProvider>
+      </body>
     </html>
   );
 }
